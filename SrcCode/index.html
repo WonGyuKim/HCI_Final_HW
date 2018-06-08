@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html>
+    <head>        
+        <title>HCI HW2</title>
+
+        <script src="src/jquery.js"></script>
+        <script src="src/math.js"></script>
+        <script src="src/plotly-latest.min.js"></script>
+
+        <link rel="stylesheet" href="src/jquery-ui/jquery-ui.css">
+        <script src="src/jquery-ui/jquery-ui.js"></script>
+
+        <script type="text/javascript" async
+            src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-MML-AM_CHTML">
+        </script>
+        <script type="text/x-mathjax-config">
+            MathJax.Hub.Config({            
+            "HTML-CSS": {
+                linebreaks: {automatic: true, width: "container"},
+                scale: 100
+            }
+            });
+        </script>
+
+        <style>
+            #frame {
+                width: 700px;
+                height: 500px;
+                display: inline-table;
+                background: #606060;
+                border: 3px solid black;
+                text-align: center;
+            }
+            #input {
+                width: 220px;                
+                display:inline-table;
+                background: black;
+                padding: 3px 1px;
+                float: left;
+            }
+            #numpad {
+                width: 200px;
+                height: auto;
+                background: grey;
+                margin: 2px;
+                padding: 1px;
+                margin-left: auto;
+                margin-right: auto;
+                border: 1px solid black;                
+            }
+            #sidebar {
+                width: 60px;                
+                background: black;
+                display: inline-table;
+                float: left;
+                padding: 3px 1px;
+            }            
+            #show {
+                width: 350px;
+                height: auto;                
+                float: right;
+                display: block;
+                background: #e0e0e0;
+                font: 20px Aerial;
+                word-break: break-all;
+                padding: 1px 1px;
+                border: 1.5px solid black;
+                
+            }
+            #user-in {
+                width: 300px;
+                height: auto;
+                display: inline-block;
+                background: #f2f2f2;
+                margin: 3px 5px;
+                padding: 3px;
+                text-align: left;
+                border: 1px solid black;
+            }
+            .input-switch {
+                font: bold 16px Consolas;
+            }
+            #stack {
+                width: 280px;
+                height: 100px;
+                display: inline-block;
+                background: #cdf5f7;
+                overflow: auto;
+                margin: 3px 5px;
+                padding: 3px;
+                font-size: 15px;
+                text-align: left;                
+            }
+            #graph-container {
+                width: 700px;
+                height: 500px;
+                display: inline-block;
+                background: #e0e0e0;
+                margin: 3px 5px;
+                padding: 3px;
+                border: 3px solid black;                
+            }
+            #graph {
+                border: 1px solid black;                
+            }
+            #normal_progress {
+                width: 300px;
+                height: 100px;
+                display: inline-block;
+                background: #b2f3f7;
+                padding: 3px;
+                text-align: left;
+                margin: 3px 5px;
+                border: 1px solid black;
+            }
+            #math_progress {
+                width: 300px;
+                height: auto;
+                display: inline-block;
+                overflow-x: auto;
+                overflow-y: hidden;
+                background: #b2f3f7;
+                padding: 3px;
+                font-size: 30px;
+                margin: 3px 5px;
+                border: 1px solid black;
+            }
+            #result {
+                width: 300px;
+                height: 100px;                
+                display: inline-block;
+                background: skyblue;
+                padding: 3px;
+                text-align: left;
+                margin: 3px 5px;
+                border: 1px solid black;
+            }
+            #menu {
+                width: 120px;                
+                text-align: center;
+                margin: 10px auto;
+                padding: 10px 10px;
+                position: relative;
+            }
+            #switch {
+                font: 16px Consolas;
+            }            
+            .key {
+                width: 20px;
+                height: 20px;
+                background: white;
+                font: bold 16px Consolas;
+                margin: 1px 1px 1px;
+                text-align: center;
+                text-anchor: middle;
+            }
+            .function-key {
+                font: italic 16px "Times New Roman" !important;
+                text-align: center;
+            }
+            .menu-key {
+                width: 40px;
+                height: auto;
+                font: 12px Consolas;
+                text-align: center;
+                margin: 3px 4px 3px;
+                padding: 3px;
+                display: inline-block;
+            }            
+            .text-key {
+                font: 12px Consolas;
+                text-align: center;
+            }
+        </style>                
+
+        
+        <script>
+            $(document).ready(function() {
+                var parser = math.parser();
+                var showValue = '0';                                
+                var log = "User define Log : <br>";
+                var head_num = 1;
+                var head = '';
+                var flag = false;
+                var NoInput = -1;                
+                var data = [ '', '', '', '', ''];
+                /*  data[0] = f(x),
+                    data[1] = g(x),
+                    data[2] = p(x),
+                    data[3] = q(x),
+                    data[4] = r(x)  */
+                var dataFlag = [false, false, false, false, false];
+                var targetNum = NoInput;
+                var temp = '';
+
+                $('#stack').html(log);
+                $('#normal_progress').text(showValue);
+                $('#math_progress').html('$$' + math.parse(showValue).toTex() + '$$');
+                $('#result').text(showValue);
+                
+                $('.text-key').each(function (index, key) {                    
+                        $(this).click(function(e){
+                            var push = '';
+                            $('#result').css('opacity', '0.7');
+                            if (showValue == '0') {
+                                showValue = '';
+                            }
+
+                            if ($(this).text() == 'open') {
+                                push += '[';
+                            }
+                            else if ($(this).text() == 'close') {
+                                push += ']';
+                            }
+                            else if ($(this).text() == 'NEXT Elem') {
+                                push += ',';
+                            }
+                            else if ($(this).text() == 'NEXT Line') {
+                                push += ';';
+                            }
+                            else if ($(this).text() == '√n') {
+                                push += 'sqrt';
+                            }
+                            else if ($(this).text() == 'en') {
+                                push += 'exp';
+                            }
+                            else if ($(this).text() == 'n2') {
+                                push += '^2';
+                            }
+                            else if ($(this).text() == 'n3') {
+                                push += '^3';
+                            }
+                            else if ($(this).text() == '×') {
+                                push += "cross(";
+                            }
+
+                            if ($(this).text() == '×') {
+                                if (flag == true) {
+                                    showValue = showValue.split('=')[0] + '=' + push + showValue.split('=')[1] + ", ";
+                                }
+                                else
+                                    showValue = push + showValue + ", ";
+                            }                                
+                            else
+                                showValue += push;
+
+                            if (flag == true) {
+                                if ($(this).text() == '×') {
+                                    log = log.split('=')[0] + '=' + push + log.split('=')[1] + ", ";
+                                }
+                                else {
+                                    log += push;
+                                }
+                                $('#stack').html(log);                                
+                            }
+                            $('#normal_progress').text(showValue);
+
+                            var node = math.parse(showValue);
+                            var latex = node.toTex({parenthesis: 'keep', implicit: 'hide'});
+                            var elem = MathJax.Hub.getAllJax('latex')[0];
+                            MathJax.Hub.Queue(['Text', elem, latex]);
+                            e.preventDefault();
+                        });
+
+                });
+                
+                
+                $('.key').each(function(index, key) {
+                    $(this).click(function(e){                        
+                        $('#result').css('opacity', '1');
+
+                        if (showValue == '0')
+                            showValue = '';
+
+                        if ($(this).text() == 'CAL' || $(this).text() == 'Save')
+                        {
+                            try {                                
+                                // 문자열 저장
+                                temp = showValue.split('=')[1];
+                                
+                                showValue = parser.eval(showValue).toString();
+                                
+                                var tokens = showValue.split(' ');
+                                if (tokens[0] == 'function') {
+                                    showValue = tokens[0];
+                                    if (targetNum != NoInput) {
+                                        if (dataFlag[targetNum] == true) {
+                                            data[targetNum] = temp;
+                                            dataFlag[targetNum] = false;
+                                        }
+                                        targetNum = NoInput;
+                                    }
+                                }
+                                $('#result').text(showValue);
+                                showValue = '0';
+
+                                if (flag == true) {
+                                    log += '<br>';
+                                    flag = false;
+                                    $('#stack').html(log);
+                                }
+                            }
+                            catch (e) {
+                                showValue = '0';
+                                if (showValue != 'function') {
+                                    $('#result').text(e);
+                                    
+                                    if (flag == true) {
+                                        var logString = '';
+                                        logString = log.split('<br>');
+                                        log='';
+                                        for (var i = 0; i < logString.length - 1; i++) {
+                                            log += logString[i];
+                                            log += '<br>';
+                                        }
+                                        $('#stack').html(log);
+                                        head_num--;
+                                        flag = false;
+                                    }
+                                    if (targetNum != NoInput) {
+                                        if (dataFlag[targetNum] == true) {
+                                            dataFlag[targetNum] = false;                                        
+                                        }
+                                        targetNum = NoInput;
+                                    }
+                                    
+                                }
+                            }
+                            
+                        }
+                        else {
+                            if ($(this).text() == 'CL') {
+                                showValue = '0';
+                                $('#result').text(showValue);
+                                $('#normal_progress').text(showValue);
+
+                                if (flag == true) {
+                                    var logString = '';
+                                    logString = log.split('<br>');
+                                    log='';
+                                    for (var i = 0; i < logString.length - 1; i++) {
+                                        log += logString[i];
+                                        log += '<br>';
+                                    }
+                                    $('#stack').html(log);
+                                    head_num--;
+                                    flag = false;
+                                }
+                                if (targetNum != NoInput) {
+                                    if (dataFlag[targetNum] == true) {
+                                        dataFlag[targetNum] = false;
+                                    }
+                                    targetNum = NoInput;
+                                }
+                                
+                            }                            
+                            else {
+                                var push = '';
+
+                                if ($(this).text() == 'BACK') {
+                                    showValue = showValue.slice(0, -1);
+                                    if (showValue.length == 0) {
+                                        showValue = '0';
+                                    }
+                                    if (flag == true) {
+                                        if (log.charAt(log.length - 2) != ' ')
+                                            log = log.slice(0, -1);
+                                        else {
+                                            log = log.slice(0, -7);
+                                            head_num--;
+                                            flag = false;
+                                            if (targetNum != NoInput) {
+                                                if (dataFlag[targetNum] == true) {
+                                                    dataFlag[targetNum] = false;
+                                                }
+                                                targetNum = NoInput;
+                                            }
+                                           
+                                        }
+                                    }
+                                }
+                                else {
+                                    if ($(this).text() == '=') {
+                                        flag = true;
+                                        log += '(' + head_num + ') : ';
+                                        head_num++;
+                                        log += showValue;
+
+                                        if (targetNum != NoInput) {
+                                            dataFlag[targetNum] = true;
+                                        }
+                                        
+                                    }
+
+                                    if ($(this).is('.text-key') == false) {
+                                        push += $(this).text();
+                                    }
+                                }
+                                /* user function save section */
+                                if (targetNum == NoInput) {
+                                    if ($(this).text() == 'f')
+                                        targetNum = 0;
+                                    else if ($(this).text() == 'g')
+                                        targetNum = 1;
+                                    else if ($(this).text() == 'p')
+                                        targetNum = 2;                                        
+                                    else if ($(this).text() == 'q')
+                                        targetNum = 3;
+                                    else if ($(this).text() == 'r')
+                                        targetNum = 4;
+                                }
+                                
+                                if ($(this).is('.function-key') == true) {
+                                    push += '(';
+                                }
+
+                                showValue += push;
+                                if (flag == true)
+                                    log += push;
+
+                                $('#result').css('opacity', '0.7');
+                                $('#normal_progress').text(showValue);
+                                $('#stack').html(log);
+                            }
+                            $('#stack').scrollTop($('#stack').scroll().height());
+                            $('#math_progress').scrollLeft($('#math_progress').scroll().width());                            
+
+                            var node = math.parse(showValue);
+                            var latex = node.toTex({parenthesis: 'keep', implicit: 'hide'});
+                            var elem = MathJax.Hub.getAllJax('latex')[0];
+                            MathJax.Hub.Queue(['Text', elem, latex]);
+                            
+                            e.preventDefault();
+                        }
+                    });
+                    
+                    
+
+
+                });
+
+                $('#switch').click(function(event) {
+                    $('div').eq(5).children('span') .toggle();
+                    if ($(this).text() == "Show Advanced Operation...") {
+                        $(this).text("Hide...");
+                    }
+                    else if ($(this).text() == "Hide...") {
+                        $(this).text("Show Advanced Operation...");
+                    }
+                });                
+                
+                $('.input-switch').click(function(event) {
+                    $('#graph-container').toggle();
+                    $('#frame').toggle();
+                    
+                    if ($(this).text() == "Show Graph") {
+                        graphDraw(data);
+                    }
+                    
+                });
+            }); // ready func 종료
+        </script>
+        
+        <script>
+            $(function () {
+                $('#menu').menu();
+            });
+            $(function() {
+                $('.key').button();                
+            });
+            $(function() {
+                $('div').eq(4).children('span') .hide();
+            });
+            $(function() {
+                $('#graph-container').hide();
+            });
+
+            var graphDraw = function(data) {
+                try {
+                    var graph = document.getElementById('graph');
+                    var name;
+                    var traces = [];
+                    var minX = -1000;
+                    var maxX = 1000;
+                    var xVal = math.range(minX, maxX, 0.1).toArray();
+                    var yVal;
+                    
+                    for (var i = 0; i < data.length; i++) {
+                        // 이름 정하기
+                        if (i == 0)
+                            name = "f(x)";
+                        else if (i == 1)
+                            name = "g(x)";
+                        else if (i == 2)
+                            name = "p(x)";
+                        else if (i == 3)
+                            name = "q(x)";
+                        else if (i == 4)
+                            name = "r(x)";
+
+                        // 함수 그리기
+                        if (data[i] != '') {                        
+                            expr = math.compile(data[i]);
+                            yVal = xVal.map(function(x) {
+                                return expr.eval({x: x});
+                            });
+                            traces.push({
+                                x: xVal,
+                                y: yVal,
+                                name: name,
+                                type: 'scatter'
+                            });                        
+                        }
+                    }
+                    var layout = {
+                        margin: {pad: 0},
+                        xaxis: {range: [-10, 10]},
+                        yaxis: {range: [-10, 10]}
+                    }
+                    Plotly.newPlot(graph, traces, layout);
+                }
+                catch (err) {
+                    alert(err);
+                }
+                
+            };
+        </script>
+    </head>
+    <body>
+    <div id='frame'>
+        <div id='input'>
+            <div id='numpad'>
+                <span class='key'>1</span>
+                <span class='key'>2</span>
+                <span class='key'>3</span>
+                <span class='key'>4</span>
+                <span class='key'>5</span>
+                <span class='key'>6</span>
+                <span class='key'>7</span>
+                <span class='key'>8</span>
+                <span class='key'>9</span>
+                <span class='key'>00</span>
+                <span class='key'>0</span>
+                <span class='key'>.</span>
+            </div>
+            
+            <div id='numpad'>
+                <span class='key'>BACK</span>
+                <span class='key'>CL</span>
+                <span class='key'>CAL</span>
+            </div>
+
+            <div id='numpad'>                
+                <span class='key'>%</span>
+                <span class='key'>^</span>
+                <span class='key text-key function-key'>√n</span>
+                <div><a id='switch' href="#">Show Advanced Operation...</a></div>                
+            </div>
+
+            <div id='numpad'>
+            <ul id='menu'>
+                <li>
+                    <div>Constant</div>
+                    <ul>
+                            <li><div class='key menu-key'>e</div></li>
+                            <li><div class='key menu-key'>pi</div></li>
+                    </ul>
+                </li>
+                <li><div>Variable</div>
+                    <ul>
+                        <li><div class='key menu-key'>x</div></li>
+                        <li><div class='key menu-key'>y</div></li>
+                        <li><div class='key menu-key'>z</div></li>
+                    </ul>
+                </li>
+                <li><div>Boolean</div>
+                    <ul>
+                            <li><div class='key menu-key'>==</div></li>
+                            <li><div class='key menu-key'>!=</div></li>
+                            <li><div class='key menu-key'>></div></li>
+                            <li><div class='key menu-key'><</div></li>
+                            <li><div class='key menu-key'>>=</div></li>
+                            <li><div class='key menu-key'><=</div></li>
+                    </ul>
+                </li>
+                <li><div>trigonomial</div>
+                    <ul>
+                            <li><div class='key menu-key function-key'>sin</div></li>
+                            <li><div class='key menu-key function-key'>cos</div></li>
+                            <li><div class='key menu-key function-key'>tan</div></li>
+                    </ul>
+                </li>
+                <li><div>exponential</div>
+                    <ul>
+                        <li><div class='key menu-key text-key function-key'>e<sup>n</sup></div></li>
+                        <li><div class='key menu-key text-key'>n<sup>2</sup></div></li>
+                        <li><div class='key menu-key text-key'>n<sup>3</sup></div></li>
+                    </ul>
+                </li>                
+                <li><div>logarithm</div>
+                    <ul>
+                        <li><div class='key menu-key function-key'>log</div></li>
+                        <li><div class='key menu-key function-key'>log10</div></li>                        
+                    </ul>
+                </li>
+                <li><div>matrix/vector</div>
+                    <ul>
+                        <li><div class='key menu-key text-key'>open</div></li>
+                        <li><div class='key menu-key text-key'>close</div></li>
+                        <li><div class='key menu-key text-key'>NEXT Elem</div></li>
+                        <li><div class='key menu-key text-key'>NEXT Line</div></li>
+                        <li><div class='key menu-key function-key'>det</div></li>
+                        <li><div class='key menu-key function-key'>inv</div></li>
+                        <li><div class='key menu-key text-key'>×</div></li>
+                    </ul>
+                </li>
+                <li><div>userFunction</div>
+                    <ul>
+                        <li><div class='key menu-key function-key'>f</div></li>
+                        <li><div class='key menu-key function-key'>g<div></li>
+                        <li><div class='key menu-key function-key'>p</div></li>
+                        <li><div class='key menu-key function-key'>q<div></li>
+                        <li><div class='key menu-key function-key'>r<div></li>
+                    </ul>
+                </li>                
+            </ul>
+            </div>
+        </div>
+
+        <span id='sidebar'>            
+            <span class='key'>+</span>
+            <span class='key'>-</span>
+            <span class='key'>*</span>
+            <span class='key'>/</span>
+        </span>
+        <span id='sidebar'>
+            <span class='key'>(</span>
+            <span class='key'>)</span>
+            <span class='key'>=</span>
+            <span class='key'>Save</span>            
+        </span>
+
+        <div id='show'>
+            <div id='user-in'><a class='input-switch' href='#'>Show Graph</a>
+                <div id='stack'></div>                
+            </div>
+            <div id='normal_progress'></div>
+            <div id='math_progress'></div>
+            <div id='result'></div>
+        </div>
+    </div>
+
+    <div id="graph-container">
+        <a class='input-switch' href='#'>Return Calculator</a>
+        <div id='graph'></div>
+    </div>
+    </body>
+</html>
